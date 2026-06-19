@@ -1,0 +1,39 @@
+# Example deployment for the Homebox OAuth proxy as a Homebox project.
+# Copy to /opt/homebox/projects/oauth-proxy/docker-compose.yml on your host
+# and replace the placeholders in `.env` (next to it).
+#
+# Required `.env`:
+#   GITHUB_CLIENT_ID=...
+#   GITHUB_CLIENT_SECRET=...
+#   PROXY_BASE_URL=https://oauth.x100.dev   (or https://oauth.homebox.sh)
+#   COOKIE_SECRET=<openssl rand -base64 32>
+#   INSTALLATION_ALLOWLIST=x100.dev,homebox.sh   (comma-separated host suffixes)
+# Optional `.env` (enables passwordless Google login):
+#   GOOGLE_CLIENT_ID=...
+#   GOOGLE_CLIENT_SECRET=...
+
+services:
+  oauth-proxy:
+    build: .
+    container_name: homebox-oauth-proxy
+    restart: unless-stopped
+    environment:
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      PROXY_BASE_URL: ${PROXY_BASE_URL}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      INSTALLATION_ALLOWLIST: ${INSTALLATION_ALLOWLIST:-}
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-net"
+      - "traefik.http.routers.oauth-proxy.rule=Host(`${PROXY_HOST}`)"
+      - "traefik.http.routers.oauth-proxy.entrypoints=web"
+      - "traefik.http.services.oauth-proxy.loadbalancer.server.port=8000"
+
+networks:
+  traefik-net:
+    external: true
